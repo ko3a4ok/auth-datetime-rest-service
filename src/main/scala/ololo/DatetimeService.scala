@@ -2,10 +2,7 @@ package ololo
 
 import java.text.SimpleDateFormat
 
-/**
- * Created by ko3a4ok on 10/26/15.
- */
-class DatetimeService(val token: Token) extends AuthenticatedService {
+class DatetimeService(val token: Token, val validator: Validator) extends AuthenticatedService with Datetime {
 
   def getDatetime: DatetimeResponse = {
     DatetimeResponse(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(System.currentTimeMillis))

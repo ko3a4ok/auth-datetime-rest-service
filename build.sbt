@@ -2,7 +2,7 @@ enablePlugins(JavaAppPackaging)
 
 name         := "test-for-luxoft"
 organization := "io.ololo"
-version      := "0.1"
+version := "1.0"
 scalaVersion := "2.11.7"
 
 mainClass in Compile := Some("Main")
@@ -26,3 +26,4 @@ libraryDependencies ++= {
 }
 
 Revolver.settings
+

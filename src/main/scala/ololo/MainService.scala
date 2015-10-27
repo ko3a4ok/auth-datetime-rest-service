@@ -1,44 +1,25 @@
 package ololo
 
-import scala.concurrent.{Await, ExecutionContextExecutor}
-import scala.concurrent.duration._
-
 import akka.actor.{ActorSystem, Props}
 import akka.http.scaladsl.model.StatusCodes._
-import akka.http.scaladsl.server.RequestContext
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.RequestContext
 import akka.pattern.ask
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.typesafe.config.Config
 
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContextExecutor}
 
-/**
- * Created by ko3a4ok on 10/26/15.
- */
+
 trait MainService extends JsonSupport {
-  implicit val system: ActorSystem
-  implicit def executor: ExecutionContextExecutor
-  implicit val materializer: Materializer
-  def config: Config
-
-  val authorizeError = ErrorResponse("not authorized")
-  val tokenService = AuthenticationService
+  lazy val tokenService = new AuthenticationService
   lazy val user = User(config.getString("auth.user"), config.getString("auth.pass"))
   lazy val loginActor = system.actorOf(Props(new LoginActor(user)))
-
-
-  def authToken(request: RequestContext): Boolean = {
-    val query = request.request.uri.query
-    val username = query.get("user")
-    val password = query.get("pass")
-    if (username.isEmpty || password.isEmpty) return false
-    implicit val timeout = Timeout(5 seconds)
-    val response = loginActor ? User(username.get, password.get)
-    val res = Await.result(response, timeout.duration).asInstanceOf[Boolean]
-    res
-  }
-
+  implicit val system: ActorSystem
+  implicit val materializer: Materializer
+  val authorizeError = ErrorResponse("not authorized")
   implicit val timeout = Timeout(5 seconds)
   val routes =
     (path("token") & post) {
@@ -67,7 +48,7 @@ trait MainService extends JsonSupport {
       (path("datetime") & get) {
         headerValueByName("Authorization") {token => {
           try {
-            val datetimeService = new DatetimeService(token)
+            val datetimeService = getDatetimeService(token)
             complete(datetimeService.getDatetime)
           } catch {
             case ex : Exception => complete(Unauthorized -> ErrorResponse(ex.getMessage))
@@ -75,4 +56,23 @@ trait MainService extends JsonSupport {
         }
       }
      }
+
+  implicit def executor: ExecutionContextExecutor
+
+  def config: Config
+
+  def authToken(request: RequestContext): Boolean = {
+    val query = request.request.uri.query
+    val username = query.get("user")
+    val password = query.get("pass")
+    if (username.isEmpty || password.isEmpty) return false
+    implicit val timeout = Timeout(5 seconds)
+    val response = loginActor ? User(username.get, password.get)
+    val res = Await.result(response, timeout.duration).asInstanceOf[Boolean]
+    res
+  }
+
+  def getDatetimeService(token: String): Datetime = {
+    new DatetimeService(token, tokenService)
+  }
 }
